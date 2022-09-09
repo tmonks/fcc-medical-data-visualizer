@@ -9,7 +9,7 @@ class CatPlotTestCase(unittest.TestCase):
         self.fig = medical_data_visualizer.draw_cat_plot()
         self.ax = self.fig.axes[0]
     
-    def test_line_plot_labels(self):
+    def test_bar_plot_labels(self):
         actual = self.ax.get_xlabel()
         expected = "variable"
         self.assertEqual(actual, expected, "Expected line plot xlabel to be 'variable'")
