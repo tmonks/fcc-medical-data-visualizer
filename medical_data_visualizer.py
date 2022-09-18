@@ -11,10 +11,9 @@ df['BMI'] = df['weight'] / ((df['height'] / 100) ** 2)
 df['overweight'] = (df['BMI'] > 25).astype(int)
 df.drop(columns='BMI', inplace=True)
 
+# Normalize data by making 0 always good and 1 always bad.
 
-### Normalize data by making 0 always good and 1 always bad. 
-
-# If the value of 'cholesterol' or 'gluc' is 1, make the value 0. 
+# If the value of 'cholesterol' or 'gluc' is 1, make the value 0.
 df.loc[df['cholesterol'] == 1, 'cholesterol'] = 0
 df.loc[df['gluc'] == 1, 'gluc'] = 0
 
@@ -22,21 +21,25 @@ df.loc[df['gluc'] == 1, 'gluc'] = 0
 df.loc[df['cholesterol'] > 1, 'cholesterol'] = 1
 df.loc[df['gluc'] > 1, 'gluc'] = 1
 
-
 # Draw Categorical Plot
+
+
 def draw_cat_plot():
-    # Create DataFrame for cat plot using `pd.melt` using just the values from 'cholesterol', 'gluc', 'smoke', 'alco', 'active', and 'overweight'.
-    df_cat = pd.melt(df, id_vars=['cardio'], value_vars=['cholesterol', 'gluc', 'smoke', 'alco', 'active', 'overweight'])
+    # Create DataFrame for cat plot using `pd.melt`
+    # moves the `value_var` columns to rows with their name under `variable` and their value under `value`
+    cat_df = pd.melt(df, id_vars=['cardio'], value_vars=[
+                     'cholesterol', 'gluc', 'smoke', 'alco', 'active', 'overweight'])
 
     # Add a column for the counts
-    df_cat['total'] = 1
+    cat_df['total'] = 1
 
-    # Group and reformat the data to split it by 'cardio'. Show the counts of each feature
-    # You will have to rename one of the columns for the catplot to work correctly
-    to_plot = df_cat.groupby(['cardio', 'variable', 'value'], as_index=False).agg({'total': 'sum'})
+    # Group the data to show count totals by each group of cardio, variable, and value
+    plot_df = cat_df.groupby(
+        ['cardio', 'variable', 'value'], as_index=False).agg({'total': 'sum'})
 
-    # Draw the catplot with 'sns.catplot()' (returns a FacetGrid)
-    g = sns.catplot(data=to_plot, x='variable', y='total', kind='bar', col='cardio', hue='value')
+    # Draw the catplot. 'sns.catplot()' returns a FacetGrid
+    g = sns.catplot(data=plot_df, x='variable', y='total',
+                    kind='bar', col='cardio', hue='value')
     fig = g.fig
 
     # Do not modify the next two lines
@@ -46,23 +49,21 @@ def draw_cat_plot():
 
 # Draw Heat Map
 def draw_heat_map():
-    # Clean the data
+    # Filter out the invalid data
 
-    # diastolic pressure is higher than systolic (Keep the correct data with (df['ap_lo'] <= df['ap_hi']))
-    pressure_mask = df['ap_lo'] <= df['ap_hi']
-    pressure_mask.value_counts()
+    # where diastolic pressure is higher than systolic
+    invalid_pressure = df['ap_lo'] > df['ap_hi']
 
-    # height is less than the 2.5th percentile (Keep the correct data with (df['height'] >= df['height'].quantile(0.025)))
-    # height is more than the 97.5th percentile
-    height_mask = (df['height'] >= df['height'].quantile(0.025)) & (df['height'] <= df['height'].quantile(0.975))
-    height_mask.value_counts()
+    # height is less than the 2.5th or more than the 97.5th percentile
+    invalid_height = (df['height'] < df['height'].quantile(0.025)) | (
+        df['height'] > df['height'].quantile(0.975))
 
-    # weight is less than the 2.5th percentile
-    # weight is more than the 97.5th percentile
-    weight_mask = (df['weight'] >= df['weight'].quantile(0.025)) & (df['weight'] <= df['weight'].quantile(0.975))
-    weight_mask.value_counts()
+    # weight is less than the 2.5th or more than the 97.5th percentile
+    invalid_weight = (df['weight'] < df['weight'].quantile(0.025)) | (
+        df['weight'] > df['weight'].quantile(0.975))
 
-    df_heat = df[pressure_mask & height_mask & weight_mask]
+    # keep only data that is not any of the invalid conditions
+    df_heat = df[~(invalid_pressure | invalid_height | invalid_weight)]
 
     # Calculate the correlation matrix
     corr = df_heat.corr()
@@ -70,11 +71,10 @@ def draw_heat_map():
     # Generate a mask for the upper triangle
     mask = np.triu(np.ones_like(corr))
 
-    # Set up the matplotlib figure
-    fig, ax = plt.subplots(figsize=(9,6))
-
-    # Draw the heatmap with 'sns.heatmap()'
-    ax = sns.heatmap(corr, mask=mask, linewidths=0.5, annot=True, fmt='.1f', cmap='mako')
+    # Draw the heatmap
+    fig, ax = plt.subplots(figsize=(9, 6))
+    ax = sns.heatmap(corr, mask=mask, linewidths=0.5,
+                     annot=True, fmt='.1f', cmap='mako')
 
     # Do not modify the next two lines
     fig.savefig('heatmap.png')
