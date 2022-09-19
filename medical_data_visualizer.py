@@ -30,12 +30,12 @@ def draw_cat_plot():
     cat_df = pd.melt(df, id_vars=['cardio'], value_vars=[
                      'cholesterol', 'gluc', 'smoke', 'alco', 'active', 'overweight'])
 
-    # Add a column for the counts
-    cat_df['total'] = 1
-
     # Group the data to show count totals by each group of cardio, variable, and value
     plot_df = cat_df.groupby(
-        ['cardio', 'variable', 'value'], as_index=False).agg({'total': 'sum'})
+        ['cardio', 'variable', 'value'], as_index=False).size()
+
+    # rename the resulting `size` column to `total``
+    plot_df = plot_df.rename(columns={'size': 'total'})
 
     # Draw the catplot. 'sns.catplot()' returns a FacetGrid
     g = sns.catplot(data=plot_df, x='variable', y='total',
